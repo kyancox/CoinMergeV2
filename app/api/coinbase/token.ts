@@ -32,13 +32,30 @@ export async function getValidCoinbaseToken(userId: string) {
   const isExpired = conn.expires_at && new Date(conn.expires_at).getTime() - 5 * 60 * 1000 < Date.now()
   console.log(`[Coinbase Token] Token expiration check - Expired: ${isExpired}, Expires at: ${conn.expires_at}`)
 
-  // If not expired, return the current token
+  // If not expired, verify the token is still valid with Coinbase
   if (!isExpired) {
-    console.log(`[Coinbase Token] Using existing valid token for user ${userId}`)
-    return conn.access_token
+    try {
+      const verifyRes = await fetch('https://api.coinbase.com/v2/user', {
+        headers: { Authorization: `Bearer ${conn.access_token}` }
+      })
+      
+      if (!verifyRes.ok) {
+        console.log(`[Coinbase Token] Token validation failed with status ${verifyRes.status}`)
+        throw new Error('Token validation failed')
+      }
+      
+      console.log(`[Coinbase Token] Using existing valid token for user ${userId}`)
+      return conn.access_token
+    } catch (err: any) {
+      console.log(`[Coinbase Token] Token validation error: ${err.message}`)
+      // If validation fails, treat it as expired and try to refresh
+      if (!conn.refresh_token) {
+        throw new Error('Token expired and no refresh token available')
+      }
+    }
   }
 
-  // If expired but no refresh token, we need to reconnect
+  // If expired or validation failed, try to refresh
   if (!conn.refresh_token) {
     console.log(`[Coinbase Token] Token expired and no refresh token available for user ${userId}`)
     throw new Error('Token expired and no refresh token available')
