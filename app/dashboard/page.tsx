@@ -8,11 +8,19 @@ type BalanceRow = {
   updated_at: string
 }
 
+type AggregatedBalance = {
+  currency: string
+  totalAmount: number
+  exchanges: string[]
+  lastUpdated: string
+}
+
 export default function DashboardPage() {
   const [balances, setBalances] = useState<BalanceRow[]>([])
   const [loading, setLoading] = useState(false)
   const [refreshingExchange, setRefreshingExchange] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedExchange, setSelectedExchange] = useState<'portfolio' | string>('portfolio')
 
   const fetchBalances = async () => {
     setLoading(true)
@@ -55,12 +63,62 @@ export default function DashboardPage() {
     fetchBalances()
   }, [])
 
-  const totalBalance = balances.reduce((sum, b) => sum + b.amount, 0)
+  // Get unique exchanges that have balances
+  const uniqueExchanges = [...new Set(balances.map(b => b.exchange))].sort()
 
-  // Group balances by exchange for better organization
+  // Filter balances based on selected exchange
+  const filteredBalances = selectedExchange === 'portfolio' 
+    ? balances 
+    : balances.filter(b => b.exchange === selectedExchange)
+
+  // Aggregate balances by currency (for portfolio view or individual exchange view)
+  const aggregatedBalances: AggregatedBalance[] = Object.values(
+    filteredBalances.reduce((acc, balance) => {
+      const { currency, amount, exchange, updated_at } = balance
+      
+      if (!acc[currency]) {
+        acc[currency] = {
+          currency,
+          totalAmount: 0,
+          exchanges: [],
+          lastUpdated: updated_at
+        }
+      }
+      
+      acc[currency].totalAmount += amount
+      if (!acc[currency].exchanges.includes(exchange)) {
+        acc[currency].exchanges.push(exchange)
+      }
+      
+      // Keep the most recent update time
+      if (new Date(updated_at) > new Date(acc[currency].lastUpdated)) {
+        acc[currency].lastUpdated = updated_at
+      }
+      
+      return acc
+    }, {} as Record<string, AggregatedBalance>)
+  ).sort((a, b) => b.totalAmount - a.totalAmount) // Sort by total amount descending
+
+  const totalBalance = filteredBalances.reduce((sum, b) => sum + b.amount, 0)
+
+  // Group balances by exchange for stats
   const coinbaseBalances = balances.filter(b => b.exchange === 'coinbase')
   const geminiBalances = balances.filter(b => b.exchange === 'gemini')
   const ledgerBalances = balances.filter(b => b.exchange === 'ledger')
+
+  // Get exchange display name and color
+  const getExchangeInfo = (exchange: string) => {
+    switch (exchange) {
+      case 'coinbase':
+        return { name: 'Coinbase', color: 'bg-blue-600 hover:bg-blue-700 border-blue-600' }
+      case 'gemini':
+        return { name: 'Gemini', color: 'bg-green-600 hover:bg-green-700 border-green-600' }
+      case 'ledger':
+        return { name: 'Ledger', color: 'bg-purple-600 hover:bg-purple-700 border-purple-600' }
+      default:
+        return { name: exchange, color: 'bg-gray-600 hover:bg-gray-700 border-gray-600' }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -68,17 +126,69 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Your Balances</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {selectedExchange === 'portfolio' 
+                  ? 'Your Portfolio' 
+                  : `${getExchangeInfo(selectedExchange).name} Portfolio`
+                }
+              </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Total Balance: {totalBalance.toFixed(2)} USD
+                {selectedExchange === 'portfolio' 
+                  ? `Total Balance: ${totalBalance.toFixed(2)} USD`
+                  : `${getExchangeInfo(selectedExchange).name} Balance: ${totalBalance.toFixed(2)} USD`
+                }
               </p>
               <div className="mt-2 flex space-x-4 text-xs text-gray-500">
-                <span>Coinbase: {coinbaseBalances.length} currencies</span>
-                <span>Gemini: {geminiBalances.length} currencies</span>
-                <span>Ledger: {ledgerBalances.length} currencies</span>
+                {selectedExchange === 'portfolio' ? (
+                  <>
+                    <span>{aggregatedBalances.length} unique currencies</span>
+                    <span>{uniqueExchanges.length} connected exchanges</span>
+                    <span>Coinbase: {coinbaseBalances.length} currencies</span>
+                    <span>Gemini: {geminiBalances.length} currencies</span>
+                    <span>Ledger: {ledgerBalances.length} currencies</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{aggregatedBalances.length} currencies</span>
+                    <span>Last updated: {aggregatedBalances.length > 0 ? new Date(Math.max(...aggregatedBalances.map(b => new Date(b.lastUpdated).getTime()))).toLocaleString() : 'Never'}</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex space-x-3">
+              {/* Exchange Filter Tabs */}
+              <div className="flex rounded-md shadow-sm">
+                <button
+                  onClick={() => setSelectedExchange('portfolio')}
+                  className={`px-4 py-2 text-sm font-medium rounded-l-md border ${
+                    selectedExchange === 'portfolio'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  } transition-colors`}
+                >
+                  Portfolio
+                </button>
+                {uniqueExchanges.map((exchange, index) => {
+                  const isLast = index === uniqueExchanges.length - 1
+                  const exchangeInfo = getExchangeInfo(exchange)
+                  return (
+                    <button
+                      key={exchange}
+                      onClick={() => setSelectedExchange(exchange)}
+                      className={`px-4 py-2 text-sm font-medium border-t border-r border-b ${
+                        isLast ? 'rounded-r-md' : ''
+                      } ${
+                        selectedExchange === exchange
+                          ? `${exchangeInfo.color} text-white`
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      } transition-colors`}
+                    >
+                      {exchangeInfo.name}
+                    </button>
+                  )
+                })}
+              </div>
+
               <button
                 onClick={refreshCoinbase}
                 disabled={loading || refreshingExchange === 'coinbase'}
@@ -136,37 +246,59 @@ export default function DashboardPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exchange</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Currency</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {selectedExchange === 'portfolio' ? 'Total Amount' : 'Amount'}
+                  </th>
+                  {selectedExchange === 'portfolio' && (
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exchanges</th>
+                  )}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {balances.map((b) => (
-                  <tr key={`${b.exchange}-${b.currency}`} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        b.exchange === 'coinbase' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : b.exchange === 'gemini' 
-                            ? 'bg-green-100 text-green-800'
-                            : b.exchange === 'ledger'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {b.exchange}
-                      </span>
+                {aggregatedBalances.map((balance) => (
+                  <tr key={balance.currency} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 uppercase">
+                      {balance.currency}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 uppercase">{b.currency}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.amount.toFixed(8)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(b.updated_at).toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      {balance.totalAmount.toFixed(8)}
+                    </td>
+                    {selectedExchange === 'portfolio' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex flex-wrap gap-1">
+                          {balance.exchanges.map((exchange) => (
+                            <span
+                              key={exchange}
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                exchange === 'coinbase' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : exchange === 'gemini' 
+                                    ? 'bg-green-100 text-green-800'
+                                    : exchange === 'ledger'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-gray-100 text-gray-800'
+                              }`}
+                            >
+                              {exchange}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(balance.lastUpdated).toLocaleString()}
+                    </td>
                   </tr>
                 ))}
-                {balances.length === 0 && !loading && (
+                {aggregatedBalances.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No balances found. Connect your exchanges in Settings to get started.
+                    <td colSpan={selectedExchange === 'portfolio' ? 4 : 3} className="px-6 py-4 text-center text-sm text-gray-500">
+                      {selectedExchange === 'portfolio' 
+                        ? 'No balances found. Connect your exchanges in Settings to get started.'
+                        : `No balances found for ${getExchangeInfo(selectedExchange).name}.`
+                      }
                     </td>
                   </tr>
                 )}
