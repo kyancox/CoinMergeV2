@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import { createCoinbaseCredentials } from '@/lib/credentials'
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
@@ -42,16 +43,21 @@ export async function GET(req: NextRequest) {
   if (!user) {
     return NextResponse.redirect(new URL('/settings?error=not_logged_in', req.url))
   }
+
+  // Create credentials object for Coinbase using utility function
+  const credentials = createCoinbaseCredentials(
+    tokenData.access_token,
+    tokenData.refresh_token ?? '',
+    tokenData.expires_in
+  )
+
   const { error: upsertError } = await supabase.from('connected_accounts').upsert({
-    user_id:       user.id,
-    exchange:      'coinbase',
-    access_token:  tokenData.access_token,
-    refresh_token: tokenData.refresh_token ?? null,
-    expires_at:    tokenData.expires_in
-                     ? new Date(Date.now()+tokenData.expires_in*1000).toISOString()
-                     : null,
-    updated_at:    new Date().toISOString(),
+    user_id: user.id,
+    exchange: 'coinbase',
+    credentials: credentials,
+    updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id,exchange' })
+  
   if (upsertError) {
     console.error('Failed to store token:', upsertError)
     return NextResponse.redirect(new URL('/settings?error=db_insert_failed', req.url))
@@ -69,7 +75,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (err) {
     console.error('Failed to auto-refresh balances:', err)
-    // we don’t block the user if refresh fails—just log it
+    // we don't block the user if refresh fails—just log it
   }
 
   // 4) Redirect back to settings

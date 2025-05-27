@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { CoinbaseCredentials } from '@/lib/types'
+import { isCoinbaseCredentials, isCoinbaseTokenExpired, createCoinbaseCredentials } from '@/lib/credentials'
 
 export async function getValidCoinbaseToken(userId: string) {
   console.log(`[Coinbase Token] Starting token validation for user ${userId}`)
@@ -15,28 +17,36 @@ export async function getValidCoinbaseToken(userId: string) {
     }
   )
 
-  // Get the stored token
+  // Get the stored token using new credentials structure
   const { data: conn } = await supabase
     .from('connected_accounts')
-    .select('access_token, refresh_token, expires_at')
+    .select('credentials')
     .eq('user_id', userId)
     .eq('exchange', 'coinbase')
     .single()
 
-  if (!conn) {
+  if (!conn || !conn.credentials) {
     console.log(`[Coinbase Token] No connection found for user ${userId}`)
     throw new Error('No Coinbase connection')
   }
 
+  // Type guard to ensure we have Coinbase credentials
+  if (!isCoinbaseCredentials(conn.credentials)) {
+    console.log(`[Coinbase Token] Invalid credentials format for user ${userId}`)
+    throw new Error('Invalid Coinbase credentials format')
+  }
+
+  const credentials = conn.credentials
+
   // Check if token is expired (within 5 minutes)
-  const isExpired = conn.expires_at && new Date(conn.expires_at).getTime() - 5 * 60 * 1000 < Date.now()
-  console.log(`[Coinbase Token] Token expiration check - Expired: ${isExpired}, Expires at: ${conn.expires_at}`)
+  const isExpired = isCoinbaseTokenExpired(credentials, 5)
+  console.log(`[Coinbase Token] Token expiration check - Expired: ${isExpired}, Expires at: ${credentials.expires_at}`)
 
   // If not expired, verify the token is still valid with Coinbase
   if (!isExpired) {
     try {
       const verifyRes = await fetch('https://api.coinbase.com/v2/user', {
-        headers: { Authorization: `Bearer ${conn.access_token}` }
+        headers: { Authorization: `Bearer ${credentials.access_token}` }
       })
       
       if (!verifyRes.ok) {
@@ -45,18 +55,18 @@ export async function getValidCoinbaseToken(userId: string) {
       }
       
       console.log(`[Coinbase Token] Using existing valid token for user ${userId}`)
-      return conn.access_token
+      return credentials.access_token
     } catch (err: any) {
       console.log(`[Coinbase Token] Token validation error: ${err.message}`)
       // If validation fails, treat it as expired and try to refresh
-      if (!conn.refresh_token) {
+      if (!credentials.refresh_token) {
         throw new Error('Token expired and no refresh token available')
       }
     }
   }
 
   // If expired or validation failed, try to refresh
-  if (!conn.refresh_token) {
+  if (!credentials.refresh_token) {
     console.log(`[Coinbase Token] Token expired and no refresh token available for user ${userId}`)
     throw new Error('Token expired and no refresh token available')
   }
@@ -68,7 +78,7 @@ export async function getValidCoinbaseToken(userId: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       grant_type: 'refresh_token',
-      refresh_token: conn.refresh_token,
+      refresh_token: credentials.refresh_token,
       client_id: process.env.NEXT_PUBLIC_COINBASE_CLIENT_ID,
       client_secret: process.env.COINBASE_CLIENT_SECRET,
     }),
@@ -82,15 +92,17 @@ export async function getValidCoinbaseToken(userId: string) {
   const tokenData = await refreshRes.json()
   console.log(`[Coinbase Token] Successfully obtained new token for user ${userId}`)
 
-  // Update the stored token
+  // Update the stored token with new credentials structure using utility function
+  const updatedCredentials = createCoinbaseCredentials(
+    tokenData.access_token,
+    tokenData.refresh_token ?? credentials.refresh_token,
+    tokenData.expires_in
+  )
+
   const { error: updateError } = await supabase
     .from('connected_accounts')
     .update({
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token ?? conn.refresh_token,
-      expires_at: tokenData.expires_in
-        ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-        : null,
+      credentials: updatedCredentials,
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId)
