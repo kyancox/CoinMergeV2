@@ -60,6 +60,7 @@ export default function DashboardPage() {
   // Group balances by exchange for better organization
   const coinbaseBalances = balances.filter(b => b.exchange === 'coinbase')
   const geminiBalances = balances.filter(b => b.exchange === 'gemini')
+  const ledgerBalances = balances.filter(b => b.exchange === 'ledger')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -74,6 +75,7 @@ export default function DashboardPage() {
               <div className="mt-2 flex space-x-4 text-xs text-gray-500">
                 <span>Coinbase: {coinbaseBalances.length} currencies</span>
                 <span>Gemini: {geminiBalances.length} currencies</span>
+                <span>Ledger: {ledgerBalances.length} currencies</span>
               </div>
             </div>
             <div className="flex space-x-3">
@@ -147,7 +149,11 @@ export default function DashboardPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         b.exchange === 'coinbase' 
                           ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
+                          : b.exchange === 'gemini' 
+                            ? 'bg-green-100 text-green-800'
+                            : b.exchange === 'ledger'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-gray-100 text-gray-800'
                       }`}>
                         {b.exchange}
                       </span>

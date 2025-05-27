@@ -1,6 +1,6 @@
 // Utility functions for working with exchange credentials
 
-import { CoinbaseCredentials, GeminiCredentials, ExchangeCredentials } from './types'
+import { CoinbaseCredentials, GeminiCredentials, LedgerCredentials, ExchangeCredentials } from './types'
 
 /**
  * Type guard to check if credentials are for Coinbase
@@ -14,6 +14,13 @@ export function isCoinbaseCredentials(credentials: ExchangeCredentials): credent
  */
 export function isGeminiCredentials(credentials: ExchangeCredentials): credentials is GeminiCredentials {
   return 'api_key' in credentials && 'api_secret' in credentials
+}
+
+/**
+ * Type guard to check if credentials are for Ledger
+ */
+export function isLedgerCredentials(credentials: ExchangeCredentials): credentials is LedgerCredentials {
+  return 'filename' in credentials && 'uploaded_at' in credentials
 }
 
 /**
@@ -43,6 +50,18 @@ export function createGeminiCredentials(
   return {
     api_key: apiKey,
     api_secret: apiSecret,
+  }
+}
+
+/**
+ * Create Ledger credentials object
+ */
+export function createLedgerCredentials(
+  filename: string
+): LedgerCredentials {
+  return {
+    filename: filename,
+    uploaded_at: new Date().toISOString(),
   }
 }
 

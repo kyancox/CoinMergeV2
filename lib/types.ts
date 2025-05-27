@@ -11,12 +11,17 @@ export interface GeminiCredentials {
   api_secret: string
 }
 
-export type ExchangeCredentials = CoinbaseCredentials | GeminiCredentials
+export interface LedgerCredentials {
+  filename: string
+  uploaded_at: string // ISO timestamp string
+}
+
+export type ExchangeCredentials = CoinbaseCredentials | GeminiCredentials | LedgerCredentials
 
 export interface ConnectedAccount {
   id?: string
   user_id: string
-  exchange: 'coinbase' | 'gemini'
+  exchange: 'coinbase' | 'gemini' | 'ledger'
   credentials: ExchangeCredentials
   created_at?: string
   updated_at?: string

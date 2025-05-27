@@ -8,6 +8,8 @@ export default function SettingsPage() {
   const [geminiApiKey, setGeminiApiKey] = useState('')
   const [geminiApiSecret, setGeminiApiSecret] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const connectCoinbase = () => {
@@ -60,6 +62,57 @@ export default function SettingsPage() {
     }
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        setMessage({ type: 'error', text: 'Please select a CSV file' })
+        return
+      }
+      setSelectedFile(file)
+      setMessage(null)
+    }
+  }
+
+  const uploadLedgerFile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!selectedFile) {
+      setMessage({ type: 'error', text: 'Please select a CSV file' })
+      return
+    }
+
+    setIsUploading(true)
+    setMessage(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+
+      const response = await fetch('/api/upload/ledger', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: data.message || 'Ledger Live file uploaded successfully!' })
+        setSelectedFile(null)
+        // Reset the file input
+        const fileInput = document.getElementById('ledger-file') as HTMLInputElement
+        if (fileInput) fileInput.value = ''
+      } else {
+        setMessage({ type: 'error', text: data.details || data.error || 'Failed to upload Ledger Live file' })
+      }
+    } catch (error) {
+      console.error('Error uploading Ledger file:', error)
+      setMessage({ type: 'error', text: 'Network error. Please try again.' })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -103,7 +156,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Gemini Section */}
-            <div>
+            <div className="border-b border-gray-200 pb-8">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Gemini</h2>
               <p className="text-sm text-gray-600 mb-4">
                 Connect your Gemini account by providing your API credentials. You can create API keys in your Gemini account settings.
@@ -172,6 +225,75 @@ export default function SettingsPage() {
                       <p>
                         Your API credentials are stored securely and encrypted. We recommend creating API keys with read-only permissions for balance checking.
                       </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Ledger Live Section */}
+            <div>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Ledger Live</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Upload your Ledger Live CSV export file to import your cryptocurrency balances. You can export this file from Ledger Live under Portfolio → Export.
+              </p>
+              
+              <form onSubmit={uploadLedgerFile} className="space-y-4">
+                <div>
+                  <label htmlFor="ledger-file" className="block text-sm font-medium text-gray-700 mb-1">
+                    CSV File
+                  </label>
+                  <input
+                    type="file"
+                    id="ledger-file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    disabled={isUploading}
+                  />
+                  {selectedFile && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={isUploading || !selectedFile}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isUploading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading...
+                    </>
+                  ) : (
+                    'Upload Ledger Live CSV'
+                  )}
+                </button>
+              </form>
+              
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">How to Export from Ledger Live</h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Open Ledger Live application</li>
+                        <li>Go to Portfolio section</li>
+                        <li>Click on "Export" or "Export operations"</li>
+                        <li>Select CSV format and download the file</li>
+                        <li>Upload the downloaded CSV file here</li>
+                      </ol>
                     </div>
                   </div>
                 </div>
