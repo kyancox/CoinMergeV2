@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     // 3) fetch live balances
     console.log('Fetching Coinbase balances...')
-    const res = await fetch('https://api.coinbase.com/v2/accounts', {
+    const res = await fetch('https://api.coinbase.com/v2/accounts?limit=100', {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
     console.log('Coinbase response status:', res.status)
