@@ -754,21 +754,21 @@ export default function DashboardPage() {
                   <th 
                     scope="col" 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleSort('price')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Price</span>
-                      <SortIcon field="price" />
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleSort('usdValue')}
                   >
                     <div className="flex items-center space-x-1">
                       <span>USD Value</span>
                       <SortIcon field="usdValue" />
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Price</span>
+                      <SortIcon field="price" />
                     </div>
                   </th>
                   {selectedExchange === 'portfolio' && (
@@ -789,8 +789,8 @@ export default function DashboardPage() {
                       {balance.totalAmount.toFixed(8)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {prices[balance.currency] ? (
-                        `$${prices[balance.currency].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
+                      {balance.usdValue ? (
+                        `$${balance.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                       ) : (
                         <span className="text-gray-400">
                           {loadingPrices ? 'Loading...' : 'Price unavailable'}
@@ -798,8 +798,8 @@ export default function DashboardPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {balance.usdValue ? (
-                        `$${balance.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      {prices[balance.currency] ? (
+                        `$${prices[balance.currency].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
                       ) : (
                         <span className="text-gray-400">
                           {loadingPrices ? 'Loading...' : 'Price unavailable'}
