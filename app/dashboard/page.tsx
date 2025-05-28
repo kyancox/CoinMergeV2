@@ -275,11 +275,11 @@ export default function DashboardPage() {
   const getExchangeInfo = (exchange: string) => {
     switch (exchange) {
       case 'coinbase':
-        return { name: 'Coinbase', color: 'bg-blue-600 hover:bg-blue-700 border-blue-600' }
+        return { name: 'Coinbase', color: 'bg-[#011082] hover:bg-[#010f73] border-[#011082]' }
       case 'gemini':
-        return { name: 'Gemini', color: 'bg-green-600 hover:bg-green-700 border-green-600' }
+        return { name: 'Gemini', color: 'bg-[#4796E3] hover:bg-[#3a85d1] border-[#4796E3]' }
       case 'ledger':
-        return { name: 'Ledger', color: 'bg-purple-600 hover:bg-purple-700 border-purple-600' }
+        return { name: 'Ledger', color: 'bg-[#d0a1f8] hover:bg-[#c48ff6] border-[#d0a1f8]' }
       default:
         return { name: exchange, color: 'bg-gray-600 hover:bg-gray-700 border-gray-600' }
     }
@@ -296,11 +296,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-          <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0 mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
+        <div className="bg-white rounded-lg shadow-sm p-4 lg:p-6">
+          <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-start lg:space-y-0 mb-6">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900 truncate">
                 {selectedExchange === 'portfolio' 
                   ? 'Your Portfolio' 
                   : `${getExchangeInfo(selectedExchange).name} Portfolio`
@@ -313,19 +313,19 @@ export default function DashboardPage() {
                 }
                 {loadingPrices && <span className="ml-2 text-xs text-blue-600">Updating prices...</span>}
               </p>
-              <div className="mt-2 flex flex-wrap gap-2 sm:gap-4 text-xs text-gray-500">
+              <div className="mt-2 flex flex-wrap gap-2 lg:gap-4 text-xs text-gray-500">
                 {selectedExchange === 'portfolio' ? (
                   <>
                     <span>{aggregatedBalances.length} unique currencies</span>
                     <span>{uniqueExchanges.length} connected exchanges</span>
-                    <span className="hidden sm:inline">Coinbase: {coinbaseBalances.length} currencies</span>
-                    <span className="hidden sm:inline">Gemini: {geminiBalances.length} currencies</span>
-                    <span className="hidden sm:inline">Ledger: {ledgerBalances.length} currencies</span>
+                    <span className="hidden lg:inline">Coinbase: {coinbaseBalances.length} currencies</span>
+                    <span className="hidden lg:inline">Gemini: {geminiBalances.length} currencies</span>
+                    <span className="hidden lg:inline">Ledger: {ledgerBalances.length} currencies</span>
                   </>
                 ) : (
                   <>
                     <span>{aggregatedBalances.length} currencies</span>
-                    <span className="hidden sm:inline">Last updated: {(() => {
+                    <span className="hidden lg:inline">Last updated: {(() => {
                       const lastUpdated = getExchangeLastUpdated(selectedExchange)
                       return lastUpdated ? lastUpdated.toLocaleString() : 'Never'
                     })()}</span>
@@ -337,17 +337,13 @@ export default function DashboardPage() {
               {selectedExchange === 'portfolio' && uniqueExchanges.length > 0 && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-md">
                   <h3 className="text-xs font-medium text-gray-700 mb-2">Last Updated</h3>
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-xs text-gray-600">
+                  <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2 lg:gap-4 text-xs text-gray-600">
                     {uniqueExchanges.map((exchange) => {
                       const lastUpdated = getExchangeLastUpdated(exchange)
                       const exchangeInfo = getExchangeInfo(exchange)
                       return (
                         <div key={exchange} className="flex items-center space-x-2">
-                          <span className={`inline-block w-2 h-2 rounded-full ${
-                            exchange === 'coinbase' ? 'bg-blue-500' :
-                            exchange === 'gemini' ? 'bg-green-500' :
-                            exchange === 'ledger' ? 'bg-purple-500' : 'bg-gray-500'
-                          }`}></span>
+                          <span className={`inline-block w-2 h-2 rounded-full ${exchangeInfo.color}`}></span>
                           <span className="font-medium">{exchangeInfo.name}:</span>
                           <span className="truncate">{lastUpdated ? lastUpdated.toLocaleString() : 'Never'}</span>
                         </div>
@@ -359,7 +355,7 @@ export default function DashboardPage() {
             </div>
             
             {/* Mobile Action Buttons */}
-            <div className="flex flex-col space-y-3 sm:hidden w-full">
+            <div className="flex flex-col space-y-3 lg:hidden w-full">
               {/* Exchange Filter Tabs - Mobile */}
               <div className="flex rounded-md shadow-sm overflow-x-auto">
                 <button
@@ -461,6 +457,7 @@ export default function DashboardPage() {
                 {showSyncDropdown && (
                   <div className="absolute right-0 mt-2 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                     <div className="py-1" role="menu">
+                      {/* Only show Coinbase option if there are Coinbase balances */}
                       {coinbaseBalances.length > 0 && (
                         <button
                           onClick={() => {
@@ -471,11 +468,12 @@ export default function DashboardPage() {
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           role="menuitem"
                         >
-                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                          <div className="w-3 h-3 bg-[#011082] rounded-full mr-3"></div>
                           Sync Coinbase
                         </button>
                       )}
                       
+                      {/* Only show Gemini option if there are Gemini balances */}
                       {geminiBalances.length > 0 && (
                         <button
                           onClick={() => {
@@ -486,7 +484,7 @@ export default function DashboardPage() {
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           role="menuitem"
                         >
-                          <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                          <div className="w-3 h-3 bg-[#4796E3] rounded-full mr-3"></div>
                           Sync Gemini
                         </button>
                       )}
@@ -503,7 +501,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Desktop Action Buttons */}
-            <div className="hidden sm:flex space-x-3">
+            <div className="hidden lg:flex space-x-3">
               {/* Exchange Filter Tabs */}
               <div className="flex rounded-md shadow-sm">
                 <button
@@ -603,7 +601,7 @@ export default function DashboardPage() {
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           role="menuitem"
                         >
-                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                          <div className="w-3 h-3 bg-[#011082] rounded-full mr-3"></div>
                           Sync Coinbase
                         </button>
                       )}
@@ -619,7 +617,7 @@ export default function DashboardPage() {
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           role="menuitem"
                         >
-                          <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                          <div className="w-3 h-3 bg-[#4796E3] rounded-full mr-3"></div>
                           Sync Gemini
                         </button>
                       )}
@@ -665,7 +663,7 @@ export default function DashboardPage() {
           )}
 
           {/* Mobile Card View */}
-          <div className="block sm:hidden">
+          <div className="block lg:hidden">
             <div className="space-y-4">
               {aggregatedBalances.map((balance) => (
                 <div key={balance.currency} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -708,11 +706,11 @@ export default function DashboardPage() {
                           key={exchange}
                           className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                             exchange === 'coinbase' 
-                              ? 'bg-blue-100 text-blue-800' 
+                              ? 'bg-[#011082]/10 text-[#011082]' 
                               : exchange === 'gemini' 
-                                ? 'bg-green-100 text-green-800'
+                                ? 'bg-[#4796E3]/10 text-[#4796E3]'
                                 : exchange === 'ledger'
-                                  ? 'bg-purple-100 text-purple-800'
+                                  ? 'bg-[#d0a1f8]/10 text-[#d0a1f8]'
                                   : 'bg-gray-100 text-gray-800'
                           }`}
                         >
@@ -735,7 +733,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden sm:block overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -832,15 +830,15 @@ export default function DashboardPage() {
                               key={exchange}
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 exchange === 'coinbase' 
-                                  ? 'bg-blue-100 text-blue-800' 
+                                  ? 'bg-[#011082]/10 text-[#011082]' 
                                   : exchange === 'gemini' 
-                                    ? 'bg-green-100 text-green-800'
+                                    ? 'bg-[#4796E3]/10 text-[#4796E3]'
                                     : exchange === 'ledger'
-                                      ? 'bg-purple-100 text-purple-800'
+                                      ? 'bg-[#d0a1f8]/10 text-[#d0a1f8]'
                                       : 'bg-gray-100 text-gray-800'
                               }`}
                             >
-                              {exchange}
+                              {exchange.charAt(0).toUpperCase() + exchange.slice(1)}
                             </span>
                           ))}
                         </div>
