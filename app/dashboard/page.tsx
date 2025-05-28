@@ -13,11 +13,18 @@ type AggregatedBalance = {
   totalAmount: number
   exchanges: string[]
   lastUpdated: string
+  usdValue?: number
+}
+
+type PriceData = {
+  [currency: string]: number
 }
 
 export default function DashboardPage() {
   const [balances, setBalances] = useState<BalanceRow[]>([])
+  const [prices, setPrices] = useState<PriceData>({})
   const [loading, setLoading] = useState(false)
+  const [loadingPrices, setLoadingPrices] = useState(false)
   const [refreshingExchange, setRefreshingExchange] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedExchange, setSelectedExchange] = useState<'portfolio' | string>('portfolio')
@@ -34,6 +41,27 @@ export default function DashboardPage() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPrices = async (currencies: string[]) => {
+    if (currencies.length === 0) return
+    
+    setLoadingPrices(true)
+    try {
+      const res = await fetch('/api/prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currencies })
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || res.statusText)
+      setPrices(json.prices)
+    } catch (err: any) {
+      console.error('Failed to fetch prices:', err)
+      // Don't set error state for prices - just log it
+    } finally {
+      setLoadingPrices(false)
     }
   }
 
@@ -63,6 +91,14 @@ export default function DashboardPage() {
     fetchBalances()
   }, [])
 
+  // Fetch prices when balances change
+  useEffect(() => {
+    if (balances.length > 0) {
+      const uniqueCurrencies = [...new Set(balances.map(b => b.currency))]
+      fetchPrices(uniqueCurrencies)
+    }
+  }, [balances])
+
   // Get unique exchanges that have balances
   const uniqueExchanges = [...new Set(balances.map(b => b.exchange))].sort()
 
@@ -81,7 +117,8 @@ export default function DashboardPage() {
           currency,
           totalAmount: 0,
           exchanges: [],
-          lastUpdated: updated_at
+          lastUpdated: updated_at,
+          usdValue: 0
         }
       }
       
@@ -95,11 +132,15 @@ export default function DashboardPage() {
         acc[currency].lastUpdated = updated_at
       }
       
+      // Calculate USD value
+      const price = prices[currency] || 0
+      acc[currency].usdValue = acc[currency].totalAmount * price
+      
       return acc
     }, {} as Record<string, AggregatedBalance>)
-  ).sort((a, b) => b.totalAmount - a.totalAmount) // Sort by total amount descending
+  ).sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0)) // Sort by USD value descending
 
-  const totalBalance = filteredBalances.reduce((sum, b) => sum + b.amount, 0)
+  const totalBalance = aggregatedBalances.reduce((sum, b) => sum + (b.usdValue || 0), 0)
 
   // Group balances by exchange for stats
   const coinbaseBalances = balances.filter(b => b.exchange === 'coinbase')
@@ -134,9 +175,10 @@ export default function DashboardPage() {
               </h1>
               <p className="mt-1 text-sm text-gray-500">
                 {selectedExchange === 'portfolio' 
-                  ? `Total Balance: ${totalBalance.toFixed(2)} USD`
-                  : `${getExchangeInfo(selectedExchange).name} Balance: ${totalBalance.toFixed(2)} USD`
+                  ? `Total Balance: $${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : `${getExchangeInfo(selectedExchange).name} Balance: $${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 }
+                {loadingPrices && <span className="ml-2 text-xs text-blue-600">Updating prices...</span>}
               </p>
               <div className="mt-2 flex space-x-4 text-xs text-gray-500">
                 {selectedExchange === 'portfolio' ? (
@@ -250,6 +292,7 @@ export default function DashboardPage() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {selectedExchange === 'portfolio' ? 'Total Amount' : 'Amount'}
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">USD Value</th>
                   {selectedExchange === 'portfolio' && (
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exchanges</th>
                   )}
@@ -264,6 +307,15 @@ export default function DashboardPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                       {balance.totalAmount.toFixed(8)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      {balance.usdValue ? (
+                        `$${balance.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      ) : (
+                        <span className="text-gray-400">
+                          {loadingPrices ? 'Loading...' : 'Price unavailable'}
+                        </span>
+                      )}
                     </td>
                     {selectedExchange === 'portfolio' && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -294,7 +346,7 @@ export default function DashboardPage() {
                 ))}
                 {aggregatedBalances.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={selectedExchange === 'portfolio' ? 4 : 3} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={selectedExchange === 'portfolio' ? 5 : 4} className="px-6 py-4 text-center text-sm text-gray-500">
                       {selectedExchange === 'portfolio' 
                         ? 'No balances found. Connect your exchanges in Settings to get started.'
                         : `No balances found for ${getExchangeInfo(selectedExchange).name}.`
