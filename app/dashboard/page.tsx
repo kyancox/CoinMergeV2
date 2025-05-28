@@ -24,6 +24,9 @@ type NameData = {
   [currency: string]: string
 }
 
+type SortField = 'currency' | 'name' | 'amount' | 'usdValue'
+type SortDirection = 'asc' | 'desc'
+
 export default function DashboardPage() {
   const [balances, setBalances] = useState<BalanceRow[]>([])
   const [prices, setPrices] = useState<PriceData>({})
@@ -33,6 +36,38 @@ export default function DashboardPage() {
   const [refreshingExchange, setRefreshingExchange] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedExchange, setSelectedExchange] = useState<'portfolio' | string>('portfolio')
+  const [sortField, setSortField] = useState<SortField>('usdValue')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [showSyncDropdown, setShowSyncDropdown] = useState(false)
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+  }
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return (
+        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      )
+    }
+    
+    return sortDirection === 'asc' ? (
+      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    )
+  }
 
   const fetchBalances = async () => {
     setLoading(true)
@@ -69,6 +104,13 @@ export default function DashboardPage() {
     } finally {
       setLoadingPrices(false)
     }
+  }
+
+  const refreshPrices = async () => {
+    if (balances.length === 0) return
+    
+    const uniqueCurrencies = [...new Set(balances.map(b => b.currency))]
+    await fetchPrices(uniqueCurrencies)
   }
 
   const refreshExchange = async (exchange: 'coinbase' | 'gemini') => {
@@ -134,6 +176,19 @@ export default function DashboardPage() {
     }
   }, [balances])
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (showSyncDropdown && !target.closest('.sync-dropdown')) {
+        setShowSyncDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showSyncDropdown])
+
   // Get unique exchanges that have balances
   const uniqueExchanges = [...new Set(balances.map(b => b.exchange))].sort()
 
@@ -173,7 +228,37 @@ export default function DashboardPage() {
       
       return acc
     }, {} as Record<string, AggregatedBalance>)
-  ).sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0)) // Sort by USD value descending
+  ).sort((a, b) => {
+    let aValue: any, bValue: any
+    
+    switch (sortField) {
+      case 'currency':
+        aValue = a.currency.toLowerCase()
+        bValue = b.currency.toLowerCase()
+        break
+      case 'name':
+        aValue = (names[a.currency] || a.currency).toLowerCase()
+        bValue = (names[b.currency] || b.currency).toLowerCase()
+        break
+      case 'amount':
+        aValue = a.totalAmount
+        bValue = b.totalAmount
+        break
+      case 'usdValue':
+        aValue = a.usdValue || 0
+        bValue = b.usdValue || 0
+        break
+      default:
+        aValue = a.usdValue || 0
+        bValue = b.usdValue || 0
+    }
+    
+    if (sortDirection === 'asc') {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+    } else {
+      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+    }
+  })
 
   const totalBalance = aggregatedBalances.reduce((sum, b) => sum + (b.usdValue || 0), 0)
 
@@ -302,42 +387,105 @@ export default function DashboardPage() {
                 })}
               </div>
 
+              {/* Refresh Prices Button */}
               <button
-                onClick={refreshCoinbase}
-                disabled={loading || refreshingExchange === 'coinbase'}
+                onClick={refreshPrices}
+                disabled={loadingPrices}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {refreshingExchange === 'coinbase' ? (
+                {loadingPrices ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Refreshing...
+                    Updating...
                   </>
                 ) : (
-                  'Refresh Coinbase'
-                )}
-              </button>
-              
-              <button
-                onClick={refreshGemini}
-                disabled={loading || refreshingExchange === 'gemini'}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {refreshingExchange === 'gemini' ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Refreshing...
+                    Refresh Prices
                   </>
-                ) : (
-                  'Refresh Gemini'
                 )}
               </button>
 
+              {/* Sync Dropdown */}
+              <div className="relative sync-dropdown">
+                <button
+                  onClick={() => setShowSyncDropdown(!showSyncDropdown)}
+                  disabled={refreshingExchange !== null}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {refreshingExchange ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Syncing {refreshingExchange}...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Sync
+                      <svg className="ml-2 -mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+
+                {showSyncDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                    <div className="py-1" role="menu">
+                      {/* Only show Coinbase option if there are Coinbase balances */}
+                      {coinbaseBalances.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setShowSyncDropdown(false)
+                            refreshCoinbase()
+                          }}
+                          disabled={refreshingExchange !== null}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          role="menuitem"
+                        >
+                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                          Sync Coinbase
+                        </button>
+                      )}
+                      
+                      {/* Only show Gemini option if there are Gemini balances */}
+                      {geminiBalances.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setShowSyncDropdown(false)
+                            refreshGemini()
+                          }}
+                          disabled={refreshingExchange !== null}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          role="menuitem"
+                        >
+                          <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                          Sync Gemini
+                        </button>
+                      )}
+                      
+                      {/* Show message if no exchanges are connected */}
+                      {coinbaseBalances.length === 0 && geminiBalances.length === 0 && (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          No exchanges connected
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Export Button */}
               <button
                 onClick={handleExport}
                 disabled={loading || loadingPrices}
@@ -370,12 +518,46 @@ export default function DashboardPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Currency</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {selectedExchange === 'portfolio' ? 'Total Amount' : 'Amount'}
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('currency')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Currency</span>
+                      <SortIcon field="currency" />
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">USD Value</th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Name</span>
+                      <SortIcon field="name" />
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('amount')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>{selectedExchange === 'portfolio' ? 'Total Amount' : 'Amount'}</span>
+                      <SortIcon field="amount" />
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('usdValue')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>USD Value</span>
+                      <SortIcon field="usdValue" />
+                    </div>
+                  </th>
                   {selectedExchange === 'portfolio' && (
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exchanges</th>
                   )}
