@@ -214,6 +214,7 @@ export default function SettingsPage() {
     isConnected, 
     onConnect, 
     onUnlink, 
+    onReupload,
     connectLabel, 
     icon,
     children,
@@ -224,6 +225,7 @@ export default function SettingsPage() {
     isConnected: boolean
     onConnect?: () => void
     onUnlink?: () => void
+    onReupload?: () => void
     connectLabel: string
     icon: React.ReactNode
     children?: React.ReactNode
@@ -245,13 +247,25 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-        {isConnected && onUnlink && (
-          <button
-            onClick={onUnlink}
-            className="text-red-600 hover:text-red-700 text-sm font-medium transition-colors"
-          >
-            Unlink
-          </button>
+        {isConnected && (onUnlink || onReupload) && (
+          <div className="flex space-x-2">
+            {onReupload && (
+              <button
+                onClick={onReupload}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+              >
+                Reupload
+              </button>
+            )}
+            {onUnlink && (
+              <button
+                onClick={onUnlink}
+                className="text-red-600 hover:text-red-700 text-sm font-medium transition-colors"
+              >
+                Unlink
+              </button>
+            )}
+          </div>
         )}
       </div>
       
@@ -456,7 +470,7 @@ export default function SettingsPage() {
             title="Ledger Live"
             description="Upload your Ledger Live CSV export to import cryptocurrency balances."
             isConnected={connectionStatus.ledger.connected}
-            onUnlink={() => setShowUnlinkModal('ledger')}
+            onReupload={() => setShowUnlinkModal('ledger-reupload')}
             connectLabel="Upload CSV File"
             metadata={connectionStatus.ledger.connected && connectionStatus.ledger.fileName ? 
               `File: ${connectionStatus.ledger.fileName}${connectionStatus.ledger.uploadDate ? ` • Uploaded: ${new Date(connectionStatus.ledger.uploadDate).toLocaleDateString()}` : ''}` : 
@@ -577,25 +591,71 @@ export default function SettingsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h3 className="ml-3 text-lg font-semibold text-gray-900">Unlink {showUnlinkModal}</h3>
+              <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                {showUnlinkModal === 'ledger-reupload' ? 'Reupload Ledger CSV' : `Unlink ${showUnlinkModal}`}
+              </h3>
             </div>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to unlink your {showUnlinkModal} account? You'll need to reconnect it to sync data again.
+              {showUnlinkModal === 'ledger-reupload' 
+                ? 'Upload a new Ledger Live CSV file to replace your current data. This will overwrite your existing Ledger balances.'
+                : `Are you sure you want to unlink your ${showUnlinkModal} account? You'll need to reconnect it to sync data again.`
+              }
             </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowUnlinkModal(null)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleUnlinkAccount(showUnlinkModal)}
-                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                Unlink Account
-              </button>
-            </div>
+            
+            {showUnlinkModal === 'ledger-reupload' ? (
+              <form onSubmit={uploadLedgerFile} className="space-y-4">
+                <div>
+                  <label htmlFor="reupload-ledger-file" className="block text-sm font-medium text-gray-700 mb-1">
+                    New CSV File
+                  </label>
+                  <input
+                    type="file"
+                    id="reupload-ledger-file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                    disabled={isUploading}
+                  />
+                  {selectedFile && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                </div>
+                
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowUnlinkModal(null)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUploading || !selectedFile}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 transition-colors"
+                  >
+                    {isUploading ? 'Uploading...' : 'Reupload CSV'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowUnlinkModal(null)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleUnlinkAccount(showUnlinkModal)}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Unlink Account
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
