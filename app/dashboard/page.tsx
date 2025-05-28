@@ -196,6 +196,15 @@ export default function DashboardPage() {
     }
   }
 
+  // Get last updated time for each exchange
+  const getExchangeLastUpdated = (exchange: string) => {
+    const exchangeBalances = balances.filter(b => b.exchange === exchange)
+    if (exchangeBalances.length === 0) return null
+    
+    const latestUpdate = Math.max(...exchangeBalances.map(b => new Date(b.updated_at).getTime()))
+    return new Date(latestUpdate)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -227,10 +236,37 @@ export default function DashboardPage() {
                 ) : (
                   <>
                     <span>{aggregatedBalances.length} currencies</span>
-                    <span>Last updated: {aggregatedBalances.length > 0 ? new Date(Math.max(...aggregatedBalances.map(b => new Date(b.lastUpdated).getTime()))).toLocaleString() : 'Never'}</span>
+                    <span>Last updated: {(() => {
+                      const lastUpdated = getExchangeLastUpdated(selectedExchange)
+                      return lastUpdated ? lastUpdated.toLocaleString() : 'Never'
+                    })()}</span>
                   </>
                 )}
               </div>
+              
+              {/* Exchange Last Updated Section */}
+              {selectedExchange === 'portfolio' && uniqueExchanges.length > 0 && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                  <h3 className="text-xs font-medium text-gray-700 mb-2">Last Updated</h3>
+                  <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                    {uniqueExchanges.map((exchange) => {
+                      const lastUpdated = getExchangeLastUpdated(exchange)
+                      const exchangeInfo = getExchangeInfo(exchange)
+                      return (
+                        <div key={exchange} className="flex items-center space-x-2">
+                          <span className={`inline-block w-2 h-2 rounded-full ${
+                            exchange === 'coinbase' ? 'bg-blue-500' :
+                            exchange === 'gemini' ? 'bg-green-500' :
+                            exchange === 'ledger' ? 'bg-purple-500' : 'bg-gray-500'
+                          }`}></span>
+                          <span className="font-medium">{exchangeInfo.name}:</span>
+                          <span>{lastUpdated ? lastUpdated.toLocaleString() : 'Never'}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex space-x-3">
               {/* Exchange Filter Tabs */}
@@ -343,7 +379,6 @@ export default function DashboardPage() {
                   {selectedExchange === 'portfolio' && (
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exchanges</th>
                   )}
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -389,14 +424,11 @@ export default function DashboardPage() {
                         </div>
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(balance.lastUpdated).toLocaleString()}
-                    </td>
                   </tr>
                 ))}
                 {aggregatedBalances.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={selectedExchange === 'portfolio' ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={selectedExchange === 'portfolio' ? 5 : 4} className="px-6 py-4 text-center text-sm text-gray-500">
                       {selectedExchange === 'portfolio' 
                         ? 'No balances found. Connect your exchanges in Settings to get started.'
                         : `No balances found for ${getExchangeInfo(selectedExchange).name}.`
