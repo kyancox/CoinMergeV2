@@ -296,11 +296,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+          <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0 mb-6">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                 {selectedExchange === 'portfolio' 
                   ? 'Your Portfolio' 
                   : `${getExchangeInfo(selectedExchange).name} Portfolio`
@@ -313,19 +313,19 @@ export default function DashboardPage() {
                 }
                 {loadingPrices && <span className="ml-2 text-xs text-blue-600">Updating prices...</span>}
               </p>
-              <div className="mt-2 flex space-x-4 text-xs text-gray-500">
+              <div className="mt-2 flex flex-wrap gap-2 sm:gap-4 text-xs text-gray-500">
                 {selectedExchange === 'portfolio' ? (
                   <>
                     <span>{aggregatedBalances.length} unique currencies</span>
                     <span>{uniqueExchanges.length} connected exchanges</span>
-                    <span>Coinbase: {coinbaseBalances.length} currencies</span>
-                    <span>Gemini: {geminiBalances.length} currencies</span>
-                    <span>Ledger: {ledgerBalances.length} currencies</span>
+                    <span className="hidden sm:inline">Coinbase: {coinbaseBalances.length} currencies</span>
+                    <span className="hidden sm:inline">Gemini: {geminiBalances.length} currencies</span>
+                    <span className="hidden sm:inline">Ledger: {ledgerBalances.length} currencies</span>
                   </>
                 ) : (
                   <>
                     <span>{aggregatedBalances.length} currencies</span>
-                    <span>Last updated: {(() => {
+                    <span className="hidden sm:inline">Last updated: {(() => {
                       const lastUpdated = getExchangeLastUpdated(selectedExchange)
                       return lastUpdated ? lastUpdated.toLocaleString() : 'Never'
                     })()}</span>
@@ -337,7 +337,7 @@ export default function DashboardPage() {
               {selectedExchange === 'portfolio' && uniqueExchanges.length > 0 && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-md">
                   <h3 className="text-xs font-medium text-gray-700 mb-2">Last Updated</h3>
-                  <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-xs text-gray-600">
                     {uniqueExchanges.map((exchange) => {
                       const lastUpdated = getExchangeLastUpdated(exchange)
                       const exchangeInfo = getExchangeInfo(exchange)
@@ -349,7 +349,7 @@ export default function DashboardPage() {
                             exchange === 'ledger' ? 'bg-purple-500' : 'bg-gray-500'
                           }`}></span>
                           <span className="font-medium">{exchangeInfo.name}:</span>
-                          <span>{lastUpdated ? lastUpdated.toLocaleString() : 'Never'}</span>
+                          <span className="truncate">{lastUpdated ? lastUpdated.toLocaleString() : 'Never'}</span>
                         </div>
                       )
                     })}
@@ -357,7 +357,153 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="flex space-x-3">
+            
+            {/* Mobile Action Buttons */}
+            <div className="flex flex-col space-y-3 sm:hidden w-full">
+              {/* Exchange Filter Tabs - Mobile */}
+              <div className="flex rounded-md shadow-sm overflow-x-auto">
+                <button
+                  onClick={() => setSelectedExchange('portfolio')}
+                  className={`px-3 py-2 text-sm font-medium rounded-l-md border whitespace-nowrap ${
+                    selectedExchange === 'portfolio'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  } transition-colors`}
+                >
+                  Portfolio
+                </button>
+                {uniqueExchanges.map((exchange, index) => {
+                  const isLast = index === uniqueExchanges.length - 1
+                  const exchangeInfo = getExchangeInfo(exchange)
+                  return (
+                    <button
+                      key={exchange}
+                      onClick={() => setSelectedExchange(exchange)}
+                      className={`px-3 py-2 text-sm font-medium border-t border-r border-b whitespace-nowrap ${
+                        isLast ? 'rounded-r-md' : ''
+                      } ${
+                        selectedExchange === exchange
+                          ? `${exchangeInfo.color} text-white`
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      } transition-colors`}
+                    >
+                      {exchangeInfo.name}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Action Buttons Row 1 - Mobile */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={refreshPrices}
+                  disabled={loadingPrices}
+                  className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loadingPrices ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="hidden xs:inline">Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span className="hidden xs:inline">Refresh Prices</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleExport}
+                  disabled={loading || loadingPrices}
+                  className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="hidden xs:inline">Export</span>
+                </button>
+              </div>
+
+              {/* Sync Dropdown - Mobile */}
+              <div className="relative sync-dropdown">
+                <button
+                  onClick={() => setShowSyncDropdown(!showSyncDropdown)}
+                  disabled={refreshingExchange !== null}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {refreshingExchange ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Syncing {refreshingExchange}...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Sync
+                      <svg className="ml-2 -mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+
+                {showSyncDropdown && (
+                  <div className="absolute right-0 mt-2 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                    <div className="py-1" role="menu">
+                      {coinbaseBalances.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setShowSyncDropdown(false)
+                            refreshCoinbase()
+                          }}
+                          disabled={refreshingExchange !== null}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          role="menuitem"
+                        >
+                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                          Sync Coinbase
+                        </button>
+                      )}
+                      
+                      {geminiBalances.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setShowSyncDropdown(false)
+                            refreshGemini()
+                          }}
+                          disabled={refreshingExchange !== null}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          role="menuitem"
+                        >
+                          <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                          Sync Gemini
+                        </button>
+                      )}
+                      
+                      {coinbaseBalances.length === 0 && geminiBalances.length === 0 && (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          No exchanges connected
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop Action Buttons */}
+            <div className="hidden sm:flex space-x-3">
               {/* Exchange Filter Tabs */}
               <div className="flex rounded-md shadow-sm">
                 <button
@@ -518,7 +664,78 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          {/* Mobile Card View */}
+          <div className="block sm:hidden">
+            <div className="space-y-4">
+              {aggregatedBalances.map((balance) => (
+                <div key={balance.currency} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 uppercase">{balance.currency}</h3>
+                      <p className="text-sm text-gray-600">{names[balance.currency] || 'Loading...'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-gray-900">
+                        {balance.usdValue ? (
+                          `$${balance.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        ) : (
+                          <span className="text-gray-400 text-sm">
+                            {loadingPrices ? 'Loading...' : 'Price unavailable'}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {prices[balance.currency] ? (
+                          `$${prices[balance.currency].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
+                        ) : (
+                          <span className="text-gray-400">
+                            {loadingPrices ? 'Loading...' : 'Price unavailable'}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm text-gray-600">Amount:</span>
+                    <span className="text-sm font-medium text-gray-900">{balance.totalAmount.toFixed(8)}</span>
+                  </div>
+                  
+                  {selectedExchange === 'portfolio' && (
+                    <div className="flex flex-wrap gap-1">
+                      {balance.exchanges.map((exchange) => (
+                        <span
+                          key={exchange}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            exchange === 'coinbase' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : exchange === 'gemini' 
+                                ? 'bg-green-100 text-green-800'
+                                : exchange === 'ledger'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {exchange}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {aggregatedBalances.length === 0 && !loading && (
+                <div className="text-center py-8 text-sm text-gray-500">
+                  {selectedExchange === 'portfolio' 
+                    ? 'No balances found. Connect your exchanges in Settings to get started.'
+                    : `No balances found for ${getExchangeInfo(selectedExchange).name}.`
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -590,8 +807,8 @@ export default function DashboardPage() {
                       {balance.totalAmount.toFixed(8)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {balance.usdValue ? (
-                        `$${balance.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      {prices[balance.currency] ? (
+                        `$${prices[balance.currency].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
                       ) : (
                         <span className="text-gray-400">
                           {loadingPrices ? 'Loading...' : 'Price unavailable'}
@@ -599,8 +816,8 @@ export default function DashboardPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {prices[balance.currency] ? (
-                        `$${prices[balance.currency].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
+                      {balance.usdValue ? (
+                        `$${balance.usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                       ) : (
                         <span className="text-gray-400">
                           {loadingPrices ? 'Loading...' : 'Price unavailable'}
