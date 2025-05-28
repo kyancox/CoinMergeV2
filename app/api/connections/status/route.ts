@@ -4,8 +4,8 @@ import { createServerClient } from '@supabase/ssr'
 import { isLedgerCredentials } from '@/lib/credentials'
 
 interface ConnectionStatus {
-  coinbase: boolean
-  gemini: boolean
+  coinbase: { connected: boolean; linkedDate?: string }
+  gemini: { connected: boolean; linkedDate?: string }
   ledger: { 
     connected: boolean
     fileName?: string
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     // 2) Get all connected accounts for this user
     const { data: connections, error } = await supabase
       .from('connected_accounts')
-      .select('exchange, credentials, updated_at')
+      .select('exchange, credentials, created_at')
       .eq('user_id', user.id)
 
     if (error) {
@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
 
     // 3) Build status object
     const status: ConnectionStatus = {
-      coinbase: false,
-      gemini: false,
+      coinbase: { connected: false },
+      gemini: { connected: false },
       ledger: { connected: false }
     }
 
@@ -55,10 +55,16 @@ export async function GET(req: NextRequest) {
     connections?.forEach(conn => {
       switch (conn.exchange) {
         case 'coinbase':
-          status.coinbase = true
+          status.coinbase = {
+            connected: true,
+            linkedDate: conn.created_at
+          }
           break
         case 'gemini':
-          status.gemini = true
+          status.gemini = {
+            connected: true,
+            linkedDate: conn.created_at
+          }
           break
         case 'ledger':
           status.ledger.connected = true

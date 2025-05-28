@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface ConnectionStatus {
-  coinbase: boolean
-  gemini: boolean
+  coinbase: { connected: boolean; linkedDate?: string }
+  gemini: { connected: boolean; linkedDate?: string }
   ledger: { connected: boolean; fileName?: string; uploadDate?: string }
 }
 
@@ -26,8 +26,8 @@ export default function SettingsPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
-    coinbase: false,
-    gemini: false,
+    coinbase: { connected: false },
+    gemini: { connected: false },
     ledger: { connected: false }
   })
 
@@ -380,10 +380,14 @@ export default function SettingsPage() {
             <ConnectionCard
               title="Coinbase"
               description="Automatically sync your cryptocurrency balances from Coinbase."
-              isConnected={connectionStatus.coinbase}
+              isConnected={connectionStatus.coinbase.connected}
               onConnect={connectCoinbase}
               onUnlink={() => setShowUnlinkModal('coinbase')}
               connectLabel="Connect Coinbase"
+              metadata={connectionStatus.coinbase.connected && connectionStatus.coinbase.linkedDate ? 
+                `Linked: ${new Date(connectionStatus.coinbase.linkedDate).toLocaleDateString()}` : 
+                undefined
+              }
               icon={
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
@@ -397,9 +401,13 @@ export default function SettingsPage() {
             <ConnectionCard
               title="Gemini"
               description="Connect using your API credentials to sync balances from Gemini."
-              isConnected={connectionStatus.gemini}
+              isConnected={connectionStatus.gemini.connected}
               onUnlink={() => setShowUnlinkModal('gemini')}
               connectLabel="Connect Gemini"
+              metadata={connectionStatus.gemini.connected && connectionStatus.gemini.linkedDate ? 
+                `Linked: ${new Date(connectionStatus.gemini.linkedDate).toLocaleDateString()}` : 
+                undefined
+              }
               icon={
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 24 24">
@@ -408,7 +416,7 @@ export default function SettingsPage() {
                 </div>
               }
             >
-              {!connectionStatus.gemini && (
+              {!connectionStatus.gemini.connected && (
                 <form onSubmit={connectGemini} className="space-y-4">
                   <div>
                     <label htmlFor="gemini-api-key" className="block text-sm font-medium text-gray-700 mb-1">
@@ -472,8 +480,8 @@ export default function SettingsPage() {
             isConnected={connectionStatus.ledger.connected}
             onReupload={() => setShowUnlinkModal('ledger-reupload')}
             connectLabel="Upload CSV File"
-            metadata={connectionStatus.ledger.connected && connectionStatus.ledger.fileName ? 
-              `File: ${connectionStatus.ledger.fileName}${connectionStatus.ledger.uploadDate ? ` • Uploaded: ${new Date(connectionStatus.ledger.uploadDate).toLocaleDateString()}` : ''}` : 
+            metadata={connectionStatus.ledger.connected ? 
+              `${connectionStatus.ledger.fileName ? `File: ${connectionStatus.ledger.fileName}` : ''}${connectionStatus.ledger.fileName && connectionStatus.ledger.uploadDate ? ' • ' : ''}${connectionStatus.ledger.uploadDate ? `Uploaded: ${new Date(connectionStatus.ledger.uploadDate).toLocaleDateString()}` : ''}` : 
               undefined
             }
             icon={
