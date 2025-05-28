@@ -23,11 +23,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  // 2) read all balances for this user
+  // 2) read all balances for this user, excluding zero amounts
   const { data, error } = await supabase
     .from('balances')
     .select('*')
     .eq('user_id', user.id)
+    .gt('amount', 0)  // Only include balances greater than 0
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
