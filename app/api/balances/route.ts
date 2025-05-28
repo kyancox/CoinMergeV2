@@ -16,23 +16,35 @@ export async function GET(req: NextRequest) {
       }
     )
 
-
   // 1) auth
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
-  // 2) read all balances for this user, excluding zero amounts
+  // 2) Get all connected exchanges for this user
+  const { data: connectedAccounts, error: connectionsError } = await supabase
+    .from('connected_accounts')
+    .select('exchange')
+    .eq('user_id', user.id)
+
+  if (connectionsError) {
+    return NextResponse.json({ error: connectionsError.message }, { status: 500 })
+  }
+
+  const connectedExchanges = connectedAccounts.map(account => account.exchange)
+
+  // 3) Only return balances for connected exchanges, excluding zero amounts
   const { data, error } = await supabase
     .from('balances')
     .select('*')
     .eq('user_id', user.id)
     .gt('amount', 0)  // Only include balances greater than 0
+    .in('exchange', connectedExchanges.length > 0 ? connectedExchanges : [''])  // If no connected exchanges, return empty
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ balances: data })
+  return NextResponse.json({ balances: data || [] })
 }
