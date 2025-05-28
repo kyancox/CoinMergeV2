@@ -20,12 +20,14 @@ export async function POST(req: NextRequest) {
     // CoinMarketCap API expects comma-separated symbols
     const symbols = cryptoCurrencies.join(',')
     
-    // Transform the response to a simple currency -> price mapping
+    // Transform the response to include both prices and names
     const prices: Record<string, number> = {}
+    const names: Record<string, string> = {}
     
     // Handle USD as special case - always $1.00
     if (currencies.includes('USD')) {
       prices['USD'] = 1.0
+      names['USD'] = 'US Dollar'
     }
     
     if (cryptoCurrencies.length > 0) {
@@ -48,16 +50,17 @@ export async function POST(req: NextRequest) {
       
       if (data.data) {
         Object.entries(data.data).forEach(([symbol, info]: [string, any]) => {
-          if (info?.quote?.USD?.price) {
+          if (info?.quote?.USD?.price && info?.name) {
             // Map back to original symbol if needed
             const originalSymbol = Object.keys(symbolMapping).find(key => symbolMapping[key] === symbol) || symbol
             prices[originalSymbol] = info.quote.USD.price
+            names[originalSymbol] = info.name
           }
         })
       }
     }
 
-    return NextResponse.json({ prices })
+    return NextResponse.json({ prices, names })
     
   } catch (error: any) {
     console.error('Error fetching prices:', error)
