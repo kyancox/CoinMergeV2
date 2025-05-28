@@ -24,7 +24,7 @@ type NameData = {
   [currency: string]: string
 }
 
-type SortField = 'currency' | 'name' | 'amount' | 'usdValue'
+type SortField = 'currency' | 'name' | 'amount' | 'price' | 'usdValue'
 type SortDirection = 'asc' | 'desc'
 
 export default function DashboardPage() {
@@ -243,6 +243,10 @@ export default function DashboardPage() {
       case 'amount':
         aValue = a.totalAmount
         bValue = b.totalAmount
+        break
+      case 'price':
+        aValue = prices[a.currency] || 0
+        bValue = prices[b.currency] || 0
         break
       case 'usdValue':
         aValue = a.usdValue || 0
@@ -551,6 +555,16 @@ export default function DashboardPage() {
                   <th 
                     scope="col" 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Price</span>
+                      <SortIcon field="price" />
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleSort('usdValue')}
                   >
                     <div className="flex items-center space-x-1">
@@ -584,6 +598,15 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      {prices[balance.currency] ? (
+                        `$${prices[balance.currency].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
+                      ) : (
+                        <span className="text-gray-400">
+                          {loadingPrices ? 'Loading...' : 'Price unavailable'}
+                        </span>
+                      )}
+                    </td>
                     {selectedExchange === 'portfolio' && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex flex-wrap gap-1">
@@ -610,7 +633,7 @@ export default function DashboardPage() {
                 ))}
                 {aggregatedBalances.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={selectedExchange === 'portfolio' ? 5 : 4} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={selectedExchange === 'portfolio' ? 6 : 5} className="px-6 py-4 text-center text-sm text-gray-500">
                       {selectedExchange === 'portfolio' 
                         ? 'No balances found. Connect your exchanges in Settings to get started.'
                         : `No balances found for ${getExchangeInfo(selectedExchange).name}.`
