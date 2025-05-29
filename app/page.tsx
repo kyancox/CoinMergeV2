@@ -48,7 +48,7 @@ export default function Home() {
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Link
                   href="/login"
-                  className="group relative inline-flex items-center justify-center rounded-xl bg-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
+                  className="group relative inline-flex items-center justify-center rounded-xl bg-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
                 >
                   Get Started Free
                   <svg className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -289,7 +289,7 @@ export default function Home() {
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Link
                 href="/login"
-                className="group relative inline-flex items-center justify-center rounded-xl bg-white px-8 py-4 text-sm font-semibold text-blue-600 shadow-lg hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
+                className="group relative inline-flex items-center justify-center rounded-xl bg-white px-8 py-4 text-sm font-semibold text-blue-600 shadow-lg hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
               >
                 Start Tracking Free
                 <svg className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
