@@ -19,7 +19,7 @@ export default function LoginPage() {
   // Redirect to settings if user is already authenticated
   useEffect(() => {
     if (session) {
-      router.push('/settings')
+      router.push('/dashboard')
     }
   }, [session, router])
 
@@ -72,7 +72,7 @@ export default function LoginPage() {
         if (error) {
           setMessage({ type: 'error', text: error.message })
         } else {
-          router.push('/settings')
+          router.push('/dashboard')
         }
       }
     } catch (error) {
