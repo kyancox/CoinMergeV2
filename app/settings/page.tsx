@@ -31,6 +31,13 @@ export default function SettingsPage() {
     ledger: { connected: false }
   })
 
+  // Change Password states
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+
   // Check connection status on component mount
   useEffect(() => {
     checkConnectionStatus()
@@ -102,6 +109,67 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: 'Network error. Please try again.' })
     } finally {
       setShowUnlinkModal(null)
+    }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
+      setMessage({ type: 'error', text: 'Please fill in all password fields' })
+      return
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' })
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'New password must be at least 6 characters long' })
+      return
+    }
+
+    if (currentPassword === newPassword) {
+      setMessage({ type: 'error', text: 'New password must be different from current password' })
+      return
+    }
+
+    setIsChangingPassword(true)
+    setMessage(null)
+
+    try {
+      // First verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: session?.user?.email || '',
+        password: currentPassword,
+      })
+
+      if (signInError) {
+        setMessage({ type: 'error', text: 'Current password is incorrect' })
+        setIsChangingPassword(false)
+        return
+      }
+
+      // Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (updateError) {
+        setMessage({ type: 'error', text: updateError.message })
+      } else {
+        setMessage({ type: 'success', text: 'Password changed successfully!' })
+        setShowChangePassword(false)
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmNewPassword('')
+      }
+    } catch (error) {
+      console.error('Change password error:', error)
+      setMessage({ type: 'error', text: 'Network error. Please try again.' })
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -335,12 +403,26 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-600">Signed in as</p>
                   <p className="font-medium text-gray-900">{session.user.email}</p>
                 </div>
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium transition-colors"
-                >
-                  Delete Account
-                </button>
+                <div className="flex items-center space-x-2 ml-4">
+                  <button
+                    onClick={() => setShowChangePassword(!showChangePassword)}
+                    className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  >
+                    <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Change Password
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  >
+                    <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Account
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -369,6 +451,100 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium">{message.text}</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Change Password Form */}
+        {showChangePassword && (
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  id="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter your current password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isChangingPassword}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter your new password"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={isChangingPassword}
+                    required
+                    minLength={6}
+                  />
+                  <p className="mt-1 text-sm text-gray-500">Must be at least 6 characters long</p>
+                </div>
+
+                <div>
+                  <label htmlFor="confirm-new-password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirm-new-password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="Confirm your new password"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={isChangingPassword}
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChangePassword(false)
+                    setCurrentPassword('')
+                    setNewPassword('')
+                    setConfirmNewPassword('')
+                    setMessage(null)
+                  }}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Changing Password...
+                    </>
+                  ) : (
+                    'Change Password'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
