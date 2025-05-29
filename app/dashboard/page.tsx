@@ -1,7 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useSession } from '@supabase/auth-helpers-react'
-import { useRouter } from 'next/navigation'
 
 type BalanceRow = {
   exchange: string
@@ -30,8 +28,6 @@ type SortField = 'currency' | 'name' | 'amount' | 'price' | 'usdValue'
 type SortDirection = 'asc' | 'desc'
 
 export default function DashboardPage() {
-  const session = useSession()
-  const router = useRouter()
   const [balances, setBalances] = useState<BalanceRow[]>([])
   const [prices, setPrices] = useState<PriceData>({})
   const [names, setNames] = useState<NameData>({})
@@ -43,30 +39,6 @@ export default function DashboardPage() {
   const [sortField, setSortField] = useState<SortField>('usdValue')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [showSyncDropdown, setShowSyncDropdown] = useState(false)
-
-  // Redirect to login if user is not authenticated
-  useEffect(() => {
-    if (session === null) {
-      router.push('/login')
-    }
-  }, [session, router])
-
-  // Don't render dashboard if user is not authenticated
-  if (session === null) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <svg className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p className="text-gray-600">Redirecting to login...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
