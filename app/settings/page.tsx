@@ -267,6 +267,8 @@ export default function SettingsPage() {
         // Reset the file input
         const fileInput = document.getElementById('ledger-file') as HTMLInputElement
         if (fileInput) fileInput.value = ''
+        // Close the modal after successful upload
+        setShowUnlinkModal(null)
         checkConnectionStatus()
       } else {
         setMessage({ type: 'error', text: data.details || data.error || 'Failed to upload Ledger Live file' })
