@@ -11,7 +11,7 @@ type AggregatedBalance = {
 
 async function fetchPricesAndNames(currencies: string[]) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/prices`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://coinmerge.co'}/api/prices`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currencies })
