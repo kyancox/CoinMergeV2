@@ -1,7 +1,12 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useSession } from '@supabase/auth-helpers-react'
 
 export default function Home() {
+  const session = useSession()
+
   return (
     <div className="min-h-screen bg-white font-sans">
       {/* Navigation */}
@@ -17,10 +22,10 @@ export default function Home() {
               </div>
             </div>
             <Link
-              href="/login"
+              href={session ? "/dashboard" : "/login"}
               className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             >
-              Sign In
+              {session ? "Dashboard" : "Sign In"}
             </Link>
           </div>
         </div>
