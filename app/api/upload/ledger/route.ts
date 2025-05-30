@@ -117,11 +117,12 @@ export async function POST(req: NextRequest) {
       balances: rows
     })
     
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error in Ledger upload endpoint:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ 
       error: 'Internal server error',
-      details: err.message
+      details: errorMessage
     }, { status: 500 })
   }
 } 

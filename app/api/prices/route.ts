@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+interface CoinMarketCapQuote {
+  USD?: {
+    price?: number;
+  };
+}
+
+interface CoinMarketCapInfo {
+  quote?: CoinMarketCapQuote;
+  name?: string;
+}
+
+interface CoinMarketCapData {
+  data?: Record<string, CoinMarketCapInfo>;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { currencies } = await req.json()
@@ -46,10 +61,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch prices' }, { status: 500 })
       }
 
-      const data = await response.json()
+      const data: CoinMarketCapData = await response.json()
       
       if (data.data) {
-        Object.entries(data.data).forEach(([symbol, info]: [string, any]) => {
+        Object.entries(data.data).forEach(([symbol, info]) => {
           if (info?.quote?.USD?.price && info?.name) {
             // Map back to original symbol if needed
             const originalSymbol = Object.keys(symbolMapping).find(key => symbolMapping[key] === symbol) || symbol
@@ -62,11 +77,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ prices, names })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching prices:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ 
       error: 'Internal server error',
-      details: error.message 
+      details: errorMessage 
     }, { status: 500 })
   }
 } 

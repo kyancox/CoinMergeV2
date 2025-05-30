@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { isLedgerCredentials } from '@/lib/credentials'
@@ -13,7 +13,7 @@ interface ConnectionStatus {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

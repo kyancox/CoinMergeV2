@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import ExcelJS from 'exceljs'
@@ -26,7 +26,7 @@ async function fetchPricesAndNames(currencies: string[]) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -203,11 +203,12 @@ export async function GET(req: NextRequest) {
       },
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Export error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ 
       error: 'Export failed',
-      details: error.message 
+      details: errorMessage
     }, { status: 500 })
   }
 }
@@ -245,4 +246,4 @@ function formatSheet(sheet: ExcelJS.Worksheet, isMaster: boolean) {
     lastRow.font = { bold: true }
     lastRow.getCell(4).numFmt = currencyFormat
   }
-} 
+}

@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
       if (response.ok) {
         setMessage({ 
           type: 'success', 
-          text: 'If an account with that email exists, we\'ve sent you a password reset link.' 
+          text: 'If an account with that email exists, we&apos;ve sent you a password reset link.' 
         })
         setEmail('')
       } else {
@@ -93,7 +93,7 @@ export default function ForgotPasswordPage() {
             Forgot Password
           </h1>
           <p className="mt-2 text-gray-600">
-            Enter your email address and we'll send you a link to reset your password
+            Enter your email address and we&apos;ll send you a link to reset your password
           </p>
         </div>
 
@@ -179,7 +179,7 @@ export default function ForgotPasswordPage() {
         {/* Help Text */}
         <div className="mt-6 text-center text-sm text-gray-500">
           <p>
-            If you don't receive an email within a few minutes, check your spam folder or{' '}
+            If you don&apos;t receive an email within a few minutes, check your spam folder or{' '}
             <button 
               onClick={() => setMessage(null)}
               className="text-blue-600 hover:text-blue-700 font-medium transition-colors"

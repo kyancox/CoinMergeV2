@@ -1,9 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { getValidGeminiCredentials, makeGeminiRequest } from '@/app/api/gemini/token'
 
-export async function POST(req: NextRequest) {
+interface GeminiBalance {
+  currency: string;
+  amount: string;
+}
+
+export async function POST() {
   // Get the Supabase session
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -48,7 +53,7 @@ export async function POST(req: NextRequest) {
     console.log('Gemini balances response:', balances)
 
     // 4) prepare rows for upsert
-    const rows = balances.map((balance: any) => ({
+    const rows = balances.map((balance: GeminiBalance) => ({
       user_id: user.id,
       exchange: 'gemini',
       currency: balance.currency,
@@ -63,11 +68,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
     
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error in Gemini refresh endpoint:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ 
-      error: err.message,
-      details: err.message === 'No Gemini connection' 
+      error: errorMessage,
+      details: errorMessage === 'No Gemini connection' 
         ? 'Please connect your Gemini account'
         : undefined
     }, { status: 401 })

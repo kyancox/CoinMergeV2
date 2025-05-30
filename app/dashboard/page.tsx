@@ -78,8 +78,9 @@ export default function DashboardPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || res.statusText)
       setBalances(json.balances)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -99,8 +100,9 @@ export default function DashboardPage() {
       if (!res.ok) throw new Error(json.error || res.statusText)
       setPrices(json.prices || {})
       setNames(json.names || {})
-    } catch (err: any) {
-      console.error('Failed to fetch prices:', err)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.error('Failed to fetch prices:', errorMessage)
       // Don't set error state for prices - just log it
     } finally {
       setLoadingPrices(false)
@@ -125,9 +127,10 @@ export default function DashboardPage() {
         throw new Error(json.details || json.error || res.statusText)
       }
       await fetchBalances()
-    } catch (err: any) {
-      console.error(`Error refreshing ${exchange}:`, err)
-      setError(err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.error(`Error refreshing ${exchange}:`, errorMessage)
+      setError(errorMessage)
     } finally {
       setRefreshingExchange(null)
     }
@@ -242,7 +245,7 @@ export default function DashboardPage() {
       return acc
     }, {} as Record<string, AggregatedBalance>)
   ).sort((a, b) => {
-    let aValue: any, bValue: any
+    let aValue: string | number, bValue: string | number
     
     switch (sortField) {
       case 'currency':

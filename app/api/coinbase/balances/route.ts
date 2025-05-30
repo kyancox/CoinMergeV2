@@ -1,9 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { getValidCoinbaseToken } from '../token'
 
-export async function GET(req: NextRequest) {
+interface CoinbaseAccount {
+  currency: {
+    code: string;
+  };
+  balance: {
+    amount: string;
+  };
+}
+
+interface CoinbaseResponse {
+  data: CoinbaseAccount[];
+}
+
+export async function GET() {
   // 1. Init Supabase server client
   // ✅ Get the Supabase session
   const cookieStore = await cookies()
@@ -38,19 +51,20 @@ export async function GET(req: NextRequest) {
       }, { status: 502 })
     }
 
-    const json = await coinbaseRes.json()
+    const json: CoinbaseResponse = await coinbaseRes.json()
     // 5. Simplify the payload
-    const balances = json.data.map((acct: any) => ({
+    const balances = json.data.map((acct: CoinbaseAccount) => ({
       currency: acct.currency.code,
       amount: acct.balance.amount
     }))
 
     return NextResponse.json({ balances })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error in balances endpoint:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json({ 
-      error: err.message,
-      details: err.message === 'Token expired and no refresh token available' 
+      error: errorMessage,
+      details: errorMessage === 'Token expired and no refresh token available' 
         ? 'Please reconnect your Coinbase account'
         : undefined
     }, { status: 401 })

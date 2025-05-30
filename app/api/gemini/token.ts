@@ -86,7 +86,7 @@ export function createGeminiHeaders(
 export async function makeGeminiRequest(
   endpoint: string,
   credentials: GeminiCredentials,
-  additionalPayload: Record<string, any> = {}
+  additionalPayload: Record<string, unknown> = {}
 ): Promise<Response> {
   const nonce = Date.now()
   

@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { CoinbaseCredentials } from '@/lib/types'
 import { isCoinbaseCredentials, isCoinbaseTokenExpired, createCoinbaseCredentials } from '@/lib/credentials'
 
 export async function getValidCoinbaseToken(userId: string) {
@@ -56,8 +55,9 @@ export async function getValidCoinbaseToken(userId: string) {
       
       console.log(`[Coinbase Token] Using existing valid token for user ${userId}`)
       return credentials.access_token
-    } catch (err: any) {
-      console.log(`[Coinbase Token] Token validation error: ${err.message}`)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      console.log(`[Coinbase Token] Token validation error: ${errorMessage}`)
       // If validation fails, treat it as expired and try to refresh
       if (!credentials.refresh_token) {
         throw new Error('Token expired and no refresh token available')
